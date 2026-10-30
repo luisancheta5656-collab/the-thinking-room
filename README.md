@@ -46,15 +46,16 @@ To change the model or service URL, set `OLLAMA_MODEL` or `OLLAMA_BASE_URL` in `
 
 ## Development
 
-You need Node.js 20.9+ and Python 3.11 (the `py -3.11` launcher).
+1. Get the code: `git clone https://github.com/luisancheta5656-collab/the-thinking-room.git`, or on GitHub choose **Code > Download ZIP** and extract it (then you don't need Git).
+2. Double-click `launch-app.bat`.
 
-Run `launch-app.bat`. It:
+The launcher sets up everything the app needs. The first run downloads about 1 GB and takes a few minutes; later runs start straight away.
 
-- checks for Node.js (and for Python when the engine isn't installed yet);
-- installs the packages on first run, and again whenever `package-lock.json` changes, for example after you pull a change that adds a package;
-- creates the OpenSpiel engine's environment in `engine\.venv` on first run, and updates it whenever `engine\requirements.txt` changes;
-- starts Ollama if it's installed, and warns if the chat model is missing;
-- opens the app in its desktop window (`npm run desktop`).
+- **Programs:** if Node.js 20.9+ or Python 3.11 is missing, it lists what's missing and asks before installing it with `winget` (Windows Package Manager, built into Windows 10 and 11). Windows may ask for permission. If `winget` isn't available, it shows the download links instead.
+- **Packages:** it installs the app's packages on first run, and again whenever `package-lock.json` changes, for example after you pull a change that adds a package.
+- **OpenSpiel engine:** it creates the engine's Python environment in `engine\.venv` on first run, and updates it whenever `engine\requirements.txt` changes. If OpenSpiel can't load because the Microsoft Visual C++ Redistributable is missing, it offers to install that too.
+- **Ollama (optional):** if Ollama isn't installed, it asks once whether to install it and the chat model (about 3 GB). If you say no, it doesn't ask again; delete `node_modules\.skip-ollama` to be asked again. If Ollama is installed, it starts it.
+- **Start:** it opens the app in its desktop window (`npm run desktop`).
 
 Only one development copy can run per project folder; the launcher tells you if one is already open.
 
