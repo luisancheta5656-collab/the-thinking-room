@@ -1,0 +1,81 @@
+{
+  "name": "the-thinking-room",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "engine": "py -3.11 -I engine/server.py",
+    "setup:engine": "py -3.11 -m venv engine/.venv && \"engine/.venv/Scripts/python.exe\" -m pip install -r engine/requirements.txt",
+    "desktop": "electron .",
+    "prepare:python": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-python.ps1",
+    "dist": "next build && npm run prepare:python && electron-builder --win nsis",
+    "dist:pack": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "lucide-react": "^1.49.0",
+    "next": "16.3.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "0.186.0",
+    "electron": "44.7.1",
+    "electron-builder": "26.17.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.8",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "description": "The Thinking Room: a board-game arcade against an OpenSpiel multi-agent team.",
+  "author": "The Thinking Room team",
+  "main": "electron/main.js",
+  "build": {
+    "appId": "com.thethinkingroom.app",
+    "productName": "The Thinking Room",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "engine",
+        "to": "engine",
+        "filter": [
+          "*.py",
+          "requirements.txt"
+        ]
+      },
+      {
+        "from": "build/python",
+        "to": "python",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "The Thinking Room"
+    },
+    "afterPack": "scripts/after-pack.js"
+  }
+}

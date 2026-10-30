@@ -1,0 +1,4 @@
+3D chess pieces by tunakron
+https://opengameart.org/node/157258
+License: CC0 1.0 (public domain) - https://creativecommons.org/publicdomain/zero/1.0/
+Files: bishop.glb, king.glb, knight.glb, pawn.glb, queen.glb, rook.glb (unchanged; colours are applied in app code)
