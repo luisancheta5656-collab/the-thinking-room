@@ -12,6 +12,8 @@ type Props = {
   legalTargets: Square[];
   lastMove: [Square, Square] | null;
   onSquareClick: (square: Square) => void;
+  /** Watching an AI vs AI match: squares aren't clickable. */
+  readOnly?: boolean;
   /** Called when WebGL cannot start, so the page can fall back to the 2D board. */
   onUnavailable: () => void;
 };
@@ -35,6 +37,8 @@ const COLORS = {
   selected: "#f4d65d",
   capture: "#f2d657",
   dot: "#193b2d",
+  check: "#f0a08f",
+  mate: "#e0604f",
 };
 
 /** Square name -> world position of its centre (white at the near side, +z). */
@@ -84,7 +88,7 @@ function makeLabel(text: string): THREE.Mesh {
   return label;
 }
 
-export default function ChessBoard3D({ fen, selected, legalTargets, lastMove, onSquareClick, onUnavailable }: Props) {
+export default function ChessBoard3D({ fen, selected, legalTargets, lastMove, onSquareClick, readOnly = false, onUnavailable }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
     tiles: Map<Square, THREE.Mesh>;
@@ -93,10 +97,12 @@ export default function ChessBoard3D({ fen, selected, legalTargets, lastMove, on
     requestRender: () => void;
     animate: (object: THREE.Object3D, from: THREE.Vector3, to: THREE.Vector3, arc: number) => void;
     shrinkAway: (object: THREE.Object3D) => void;
+    topple: (object: THREE.Object3D, delayMs: number) => void;
     templates: Record<PieceType, THREE.Object3D> | null;
     materials: { white: THREE.Material; black: THREE.Material };
   } | null>(null);
   const clickRef = useRef(onSquareClick);
+  const readOnlyRef = useRef(readOnly);
   const unavailableRef = useRef(onUnavailable);
   const lastMoveRef = useRef(lastMove);
   const previousFenRef = useRef<string | null>(null);
@@ -104,6 +110,7 @@ export default function ChessBoard3D({ fen, selected, legalTargets, lastMove, on
 
   useEffect(() => {
     clickRef.current = onSquareClick;
+    readOnlyRef.current = readOnly;
     unavailableRef.current = onUnavailable;
     lastMoveRef.current = lastMove;
   });
@@ -223,6 +230,24 @@ export default function ChessBoard3D({ fen, selected, legalTargets, lastMove, on
       requestRender();
     };
 
+    // A checkmated king falls over, toward the middle of the board.
+    const topple = (object: THREE.Object3D, delayMs: number) => {
+      const start = performance.now();
+      const standing = object.quaternion.clone();
+      const axis = new THREE.Vector3(0, 0, object.position.x < 0 ? -1 : 1);
+      const fall = new THREE.Quaternion();
+      animations.add((now) => {
+        const t = Math.min(1, Math.max(0, (now - start - delayMs) / 650));
+        const eased = t * t * (3 - 2 * t);
+        fall.setFromAxisAngle(axis, eased * 1.45);
+        object.quaternion.copy(fall).multiply(standing);
+        // Lying down, the base no longer touches the board, so lift it by about its radius.
+        object.position.y = eased * 0.28;
+        return t < 1;
+      });
+      requestRender();
+    };
+
     // Fit the whole board, including the back rank's tall pieces, into the square view.
     const fitCamera = () => {
       const { clientWidth: width, clientHeight: height } = container;
@@ -273,12 +298,12 @@ export default function ChessBoard3D({ fen, selected, legalTargets, lastMove, on
       if (square) clickRef.current(square);
     };
     const onPointerMove = (event: PointerEvent) => {
-      renderer.domElement.style.cursor = squareAt(event) ? "pointer" : "default";
+      renderer.domElement.style.cursor = !readOnlyRef.current && squareAt(event) ? "pointer" : "default";
     };
     renderer.domElement.addEventListener("click", onClick);
     renderer.domElement.addEventListener("pointermove", onPointerMove);
 
-    sceneRef.current = { tiles, pieces, markers, requestRender, animate, shrinkAway, templates: null, materials };
+    sceneRef.current = { tiles, pieces, markers, requestRender, animate, shrinkAway, topple, templates: null, materials };
     let cancelled = false;
     loadTemplates()
       .then((templates) => {
@@ -329,8 +354,10 @@ export default function ChessBoard3D({ fen, selected, legalTargets, lastMove, on
       view.pieces.add(piece);
       return piece;
     };
-    const board = new Chess(fen).board();
+    const position = new Chess(fen);
+    const board = position.board();
     let moved: THREE.Object3D | null = null;
+    let matedKing: THREE.Object3D | null = null;
     const lastMoved = lastMoveRef.current;
     const move: [Square, Square] | null = lastMoved ? [lastMoved[0], lastMoved[1]] : null;
     const isNewMove = Boolean(move && previousFen && previousFen !== fen);
@@ -339,6 +366,7 @@ export default function ChessBoard3D({ fen, selected, legalTargets, lastMove, on
         if (!cell) continue;
         const piece = place(cell.type as PieceType, cell.color, cell.square);
         if (isNewMove && move && cell.square === move[1]) moved = piece;
+        if (cell.type === "k" && cell.color === position.turn() && position.isCheckmate()) matedKing = piece;
       }
     }
     if (moved && move && previousFen) {
@@ -356,22 +384,31 @@ export default function ChessBoard3D({ fen, selected, legalTargets, lastMove, on
     } else {
       view.requestRender();
     }
+    // After the mating move lands; at once if the board was only redrawn.
+    if (matedKing) view.topple(matedKing, moved ? SLIDE_MS + 100 : -1000);
   }, [fen, templatesReady]);
 
-  // Selection, legal-move markers and last-move highlight.
+  // Selection, legal-move markers, last-move highlight, and a king in check.
   useEffect(() => {
     const view = sceneRef.current;
     if (!view) return;
+    const position = new Chess(fen);
+    const checkedKing = position.inCheck()
+      ? position.board().flat().find((cell) => cell?.type === "k" && cell.color === position.turn())?.square
+      : undefined;
     for (const [square, tile] of view.tiles) {
       const isLast = lastMove?.includes(square) ?? false;
       const dark = tile.userData.dark as boolean;
-      (tile.material as THREE.MeshStandardMaterial).color.set(isLast ? (dark ? COLORS.lastDark : COLORS.lastLight) : (dark ? COLORS.dark : COLORS.light));
+      const color = square === checkedKing ? (position.isCheckmate() ? COLORS.mate : COLORS.check)
+        : isLast ? (dark ? COLORS.lastDark : COLORS.lastLight)
+          : dark ? COLORS.dark : COLORS.light;
+      (tile.material as THREE.MeshStandardMaterial).color.set(color);
     }
     for (const marker of [...view.markers.children]) {
       disposeMesh(marker);
       view.markers.remove(marker);
     }
-    const occupied = new Set(new Chess(fen).board().flat().filter(Boolean).map((cell) => cell!.square));
+    const occupied = new Set(position.board().flat().filter(Boolean).map((cell) => cell!.square));
     if (selected) {
       const outline = new THREE.Shape();
       outline.moveTo(-0.5, -0.5).lineTo(0.5, -0.5).lineTo(0.5, 0.5).lineTo(-0.5, 0.5).lineTo(-0.5, -0.5);

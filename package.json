@@ -11,7 +11,8 @@
     "setup:engine": "py -3.11 -m venv engine/.venv && \"engine/.venv/Scripts/python.exe\" -m pip install -r engine/requirements.txt",
     "desktop": "electron .",
     "prepare:python": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-python.ps1",
-    "dist": "next build && npm run prepare:python && electron-builder --win nsis",
+    "prepare:stockfish": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-stockfish.ps1",
+    "dist": "next build && npm run prepare:python && npm run prepare:stockfish && electron-builder --win nsis",
     "dist:pack": "electron-builder --win nsis"
   },
   "dependencies": {
@@ -55,7 +56,10 @@
         "to": "engine",
         "filter": [
           "*.py",
-          "requirements.txt"
+          "requirements.txt",
+          "vendor/**/*",
+          "bin/**/*",
+          "!**/__pycache__/**"
         ]
       },
       {

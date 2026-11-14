@@ -4,8 +4,9 @@ Chess, tic-tac-toe and Gomoku use OpenSpiel's built-in games.
 Checkers is registered as a Python OpenSpiel game because the built-in one
 cannot be loaded from a custom position and uses different crowning rules.
 
-The agent team plays O, black or black. That is OpenSpiel player 1 in every
-game except chess, where OpenSpiel numbers black as player 0.
+Agents play whichever side is to move, so they can face each other in AI vs AI.
+OpenSpiel numbers black as player 0 and white as player 1 in chess; in checkers,
+red is player 0 and black is player 1.
 """
 
 from __future__ import annotations
@@ -23,14 +24,12 @@ class Adapter:
 
     name = ""
     game: pyspiel.Game
-    # OpenSpiel player id of the agent team.
-    agent = 1
     # MCTS leaf evaluation: random rollouts (cheap C++ games) or the heuristic.
     rollouts = False
     # Use PUCT with heuristic priors instead of plain UCT.
     informed_priors = False
-    # challenge mode -> (MCTS simulations, alpha-beta depth)
-    budgets: dict[str, tuple[int, int]] = {}
+    # difficulty level (1 to 5) -> (MCTS simulations, alpha-beta depth)
+    budgets: dict[int, tuple[int, int]] = {}
 
     def build(self, board) -> pyspiel.State:
         raise NotImplementedError
@@ -89,7 +88,7 @@ def _replay_alternating(game: pyspiel.Game, cells: list[str]) -> pyspiel.State:
 class TicTacToe(Adapter):
     name = "tictactoe"
     rollouts = True
-    budgets = {"eased": (40, 1), "balanced": (400, 9), "increased": (1500, 9)}
+    budgets = {1: (10, 1), 2: (40, 1), 3: (400, 9), 4: (1500, 9), 5: (3000, 9)}
 
     def __init__(self):
         self.game = pyspiel.load_game("tic_tac_toe")
@@ -157,7 +156,7 @@ def _gomoku_shape(cells: list[str], index: int, stone: str) -> int:
 class Gomoku(Adapter):
     name = "gomoku"
     informed_priors = True
-    budgets = {"eased": (150, 1), "balanced": (500, 2), "increased": (1000, 3)}
+    budgets = {1: (40, 1), 2: (150, 1), 3: (500, 2), 4: (1000, 3), 5: (2000, 3)}
     search_width = 10
 
     def __init__(self):
@@ -224,8 +223,7 @@ _CHESS_VALUES = {"p": 1.0, "n": 3.0, "b": 3.25, "r": 5.0, "q": 9.0, "k": 0.0}
 
 class Chess(Adapter):
     name = "chess"
-    agent = 0  # OpenSpiel chess: black is player 0, white is player 1.
-    budgets = {"eased": (120, 1), "balanced": (500, 3), "increased": (1500, 4)}
+    budgets = {1: (60, 1), 2: (120, 1), 3: (500, 3), 4: (1500, 4), 5: (3000, 5)}
 
     def __init__(self):
         self.game = pyspiel.load_game("chess")
@@ -238,8 +236,8 @@ class Chess(Adapter):
             state = self.game.new_initial_state(fen)
         except pyspiel.SpielError as error:
             raise EngineError(f"Invalid FEN: {error}") from error
-        if state.is_terminal() or state.current_player() != self.agent:
-            raise EngineError("It must be black's turn in an unfinished game.")
+        if state.is_terminal():
+            raise EngineError("The game is already over.")
         return state
 
     def move_to_action(self, state, move):
@@ -444,7 +442,7 @@ def _checkers_square(index: int) -> str:
 
 class Checkers(Adapter):
     name = "checkers"
-    budgets = {"eased": (100, 2), "balanced": (400, 4), "increased": (800, 6)}
+    budgets = {1: (30, 1), 2: (100, 2), 3: (400, 4), 4: (800, 6), 5: (1500, 8)}
 
     def __init__(self):
         self.game = pyspiel.load_game(_CHECKERS_TYPE.short_name)
@@ -455,16 +453,16 @@ class Checkers(Adapter):
         cells, turn, forced = board.get("board"), board.get("turn"), board.get("forcedFrom")
         if not isinstance(cells, list) or len(cells) != 64 or any(cell not in (None, "r", "R", "b", "B") for cell in cells):
             raise EngineError("Expected 64 checkers squares.")
-        if turn != "b":
-            raise EngineError("It must be black's (the agent team's) turn.")
-        if forced is not None and not (isinstance(forced, int) and 0 <= forced < 64 and cells[forced] in ("b", "B")):
-            raise EngineError("forcedFrom must point at a black piece.")
+        if turn not in ("r", "b"):
+            raise EngineError("turn must be r or b.")
+        if forced is not None and not (isinstance(forced, int) and 0 <= forced < 64 and cells[forced] in (turn, turn.upper())):
+            raise EngineError("forcedFrom must point at a piece of the side to move.")
         state = self.game.new_initial_state()
         state.board = list(cells)
-        state.player = self.agent
+        state.player = _OWNER[turn]
         state.forced = forced
         if not state.legal_actions():
-            raise EngineError("Black has no legal move.")
+            raise EngineError("The side to move has no legal move.")
         return state
 
     def move_to_action(self, state, move):

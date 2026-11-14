@@ -1,1 +1,2 @@
 open_spiel==2.0.2
+sunfish==2026.1

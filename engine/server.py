@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pyspiel  # noqa: E402
 
 import agents  # noqa: E402
+import roster  # noqa: E402
 from games import ADAPTERS, EngineError  # noqa: E402
 
 MAX_BODY = 64 * 1024
@@ -39,6 +40,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
             self._send(200, {"ok": True, "engine": "openspiel", "version": OPENSPIEL_VERSION, "games": sorted(ADAPTERS)})
+        elif self.path == "/players":
+            self._send(200, {"players": roster.listing()})
         else:
             self._send(404, {"error": "Not found."})
 
@@ -55,7 +58,11 @@ class Handler(BaseHTTPRequestHandler):
                 legal = payload.get("legalMoves")
                 if not isinstance(legal, list) or not legal or not all(isinstance(move, str) for move in legal):
                     raise EngineError("legalMoves must be a non-empty list of strings.")
-                result = agents.choose_move(payload.get("game"), payload.get("board"), legal, payload.get("challengeMode", "balanced"))
+                if "player" in payload:
+                    # AI vs AI: one named player from the roster takes this move.
+                    result = roster.play(payload["player"], payload.get("game"), payload.get("board"), legal, payload.get("level"))
+                else:
+                    result = agents.choose_move(payload.get("game"), payload.get("board"), legal, payload.get("level"))
             else:
                 self._send(404, {"error": "Not found."})
                 return

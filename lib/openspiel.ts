@@ -15,6 +15,14 @@ export async function openspielStatus(): Promise<OpenSpielStatus> {
   }
 }
 
+/** The agents that can take a side in AI vs AI. */
+export async function openspielPlayers(): Promise<unknown[]> {
+  const response = await fetch(`${openspielBaseUrl()}/players`, { signal: AbortSignal.timeout(5000) });
+  if (!response.ok) throw new Error(`The OpenSpiel engine could not list its agents: HTTP ${response.status}`);
+  const data = await response.json() as { players?: unknown[] };
+  return data.players ?? [];
+}
+
 export async function askOpenSpiel<T>(path: "/move", body: unknown): Promise<T> {
   let response: Response;
   try {

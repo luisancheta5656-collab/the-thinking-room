@@ -91,6 +91,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--coral); outline
 .arena-subtitle { display: block; margin-top: 3px; color: #96a197; font-size: 8px; letter-spacing: 1px; font-weight: 650; }
 .turn-pill { margin: auto; display: flex; align-items: center; gap: 8px; padding: 8px 11px; border: 1px solid #e8eee6; border-radius: 3px; color: #64766a; font-size: 10px; font-weight: 600; }
 .turn-dot { width: 6px; height: 6px; border-radius: 50%; background: #75a955; }
+.turn-pill.turn-check { border-color: #f6c3b9; background: #fff3f0; color: #c4513f; }
 .turn-pill.turn-finished { color: var(--forest); border-color: #d9e6d4; background: #f6faf3; }
 .turn-spinner { display: inline-flex; color: #779d55; animation: spin 800ms linear infinite; }
 .reset-button { height: 34px; padding: 0 11px; display: flex; align-items: center; gap: 7px; border: 1px solid #dfe7de; border-radius: 3px; background: #fff; color: #5c6e63; font-size: 10px; font-weight: 600; cursor: pointer; transition: border-color 150ms ease, background 150ms ease; }
@@ -125,6 +126,27 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--coral); outline
 .opponent-avatar { background: #e6f2dc; color: #3a684a; }
 .user-avatar { background: #fff0e8; color: #a5513e; }
 .player-name { display: grid; gap: 2px; font-size: 11px; font-weight: 700; }
+/* Difficulty: a dark pill with five stops and a round white thumb. */
+.difficulty { display: inline-flex; align-items: center; gap: 8px; color: #5c6e63; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.difficulty-label b { color: var(--ink); font-weight: 650; }
+.difficulty-track { position: relative; flex: none; width: 88px; height: 20px; border-radius: 10px; background: var(--forest); }
+.difficulty-track:focus-within { outline: 2px solid #9cb29d; outline-offset: 1px; }
+/* The input is inset 3px and its thumb is 14px, so the stops sit 10px from each end. */
+.difficulty-dots { position: absolute; inset: 0; padding: 0 8px; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
+.difficulty-dots i { width: 4px; height: 4px; border-radius: 50%; background: #ffffff70; }
+.difficulty-track input { position: absolute; top: 0; left: 3px; width: 82px; height: 20px; margin: 0; appearance: none; background: transparent; outline: none; cursor: pointer; }
+.difficulty-track input::-webkit-slider-runnable-track { height: 20px; background: transparent; }
+.difficulty-track input::-moz-range-track { height: 20px; background: transparent; }
+.difficulty-track input::-webkit-slider-thumb { width: 14px; height: 14px; margin-top: 3px; appearance: none; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0005; }
+.difficulty-track input::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0005; }
+.difficulty-track input:disabled { cursor: default; }
+.difficulty:has(input:disabled) { opacity: 0.55; }
+.player-difficulty { margin: 0 12px 0 auto; }
+.resign-button { height: 26px; margin: 0 10px 0 auto; padding: 0 9px; display: flex; align-items: center; gap: 5px; border: 1px solid #e5d6d2; border-radius: 3px; background: #fff; color: #9a5446; font-size: 10px; font-weight: 650; cursor: pointer; transition: background 150ms ease, color 150ms ease, border-color 150ms ease; }
+.resign-button:hover { border-color: #e7a597; background: #fff3f0; }
+.resign-button.is-armed { border-color: var(--coral); background: var(--coral); color: #fff; }
+.opponent-select { max-width: 190px; height: 24px; padding: 0 4px; border: 1px solid #dfe7de; border-radius: 2px; background: #fbfcfa; color: var(--ink); font-size: 11px; font-weight: 700; cursor: pointer; }
+.opponent-select:disabled { border-color: transparent; background: transparent; color: var(--ink); opacity: 1; appearance: none; padding: 0; cursor: default; }
 .player-label { color: #95a098; font-size: 8px; letter-spacing: 0.85px; font-weight: 650; }
 .player-piece-label { padding: 5px 7px; border: 1px solid #e7ede5; color: #829087; font-size: 8px; letter-spacing: 0.9px; font-weight: 700; }
 
@@ -142,6 +164,13 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--coral); outline
 .chess-piece { z-index: 1; font-family: "Segoe UI Symbol", "DejaVu Sans", sans-serif; font-size: calc((var(--board) - 16px) / 8 * 0.72); line-height: 1; user-select: none; transition: transform 120ms ease; }
 .chess-square:hover .chess-piece { transform: scale(1.08); }
 
+/* Check: the attacked king's square glows red; checkmate turns it red and the king falls over. */
+.chess-square.in-check.square-light, .chess-square.in-check.square-dark { background-image: radial-gradient(circle, #f36d5de6 0%, #f36d5d80 42%, transparent 72%); }
+.chess-square.checkmated.square-light, .chess-square.checkmated.square-dark { background: #e0604f; animation: mate-pulse 1.6s ease-in-out 600ms infinite; }
+.chess-piece.toppled { rotate: 80deg; translate: 6% 14%; animation: king-topple 650ms cubic-bezier(0.55, 0, 0.6, 1.35) 550ms both; }
+@keyframes king-topple { from { rotate: 0deg; translate: 0 0; } }
+@keyframes mate-pulse { 50% { box-shadow: inset 0 0 0 4px #ffd9cf; } }
+
 /* Move animations, timed like the checkers ones (lib/animation.ts): the piece slides from its old
    square (offsets --dx/--dy, in squares) and a captured piece shrinks away as it lands. */
 .chess-square.has-arrival { z-index: 2; }
@@ -157,7 +186,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--coral); outline
   to { opacity: 0; scale: 0.3; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chess-piece.arriving { animation: none; }
+  .chess-piece.arriving, .chess-piece.toppled, .chess-square.checkmated { animation: none; }
   .chess-captured { display: none; }
 }
 .piece-white { color: #fcfff3; text-shadow: 0 1px 1px #315743, 0 2px 2px #315743, 0 0 2px #274b38; }
@@ -275,7 +304,33 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--coral); outline
 .result-secondary:hover { border-color: #9cb29d; background: #f5f8f3; }
 
 /* The chat fills the whole side panel. */
-.match-panel { min-width: 0; min-height: 0; padding: 14px; display: flex; flex-direction: column; }
+.match-panel { min-width: 0; min-height: 0; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.board-column.is-watching .chess-square, .board-column.is-watching .checkers-square { cursor: default; }
+.board-column.is-watching .chess-square:hover .chess-piece, .board-column.is-watching .checkers-square:hover .checker-piece:not(.checker-captured) { transform: none; }
+
+/* AI vs AI: choosing the agents and controlling the match. */
+.agent-match { flex: none; display: grid; gap: 9px; padding: 11px 10px; border: 1px solid #e5ece3; background: #fff; }
+.agent-match-heading { display: flex; align-items: center; gap: 6px; color: #526b5a; font-size: 9px; letter-spacing: 0.7px; font-weight: 750; }
+.agent-match-heading svg { color: #719079; }
+.agent-pick { min-width: 0; display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; column-gap: 8px; row-gap: 3px; }
+.agent-pick-side { color: #829087; font-size: 8px; letter-spacing: 0.9px; font-weight: 700; }
+.agent-pick select { min-width: 0; width: 100%; height: 30px; padding: 0 6px; border: 1px solid #dfe7de; border-radius: 2px; background: #fbfcfa; color: var(--ink); font-size: 11px; font-weight: 600; cursor: pointer; }
+.agent-pick select:disabled { color: #5c6e63; background: #f3f6f1; cursor: default; }
+.agent-pick small { grid-column: 2; overflow: hidden; color: #8a968e; font-size: 9px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.agent-pick-level { grid-column: 2; }
+.agent-controls { min-height: 32px; display: flex; gap: 6px; }
+.agent-controls button { height: 32px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 3px; font-size: 11px; font-weight: 650; cursor: pointer; }
+.agent-controls button:disabled { opacity: 0.5; cursor: default; }
+.agent-primary { flex: 1; border: 1px solid var(--forest); background: var(--forest); color: var(--lime); }
+.agent-primary:not(:disabled):hover { background: var(--forest-deep); }
+.agent-secondary { padding: 0 11px; border: 1px solid #dfe7de; background: #fff; color: #5c6e63; }
+.agent-secondary:not(:disabled):hover { border-color: #9cb29d; background: #f5f8f3; }
+.agent-finished { flex: 1; align-self: center; color: #648b50; font-size: 11px; font-weight: 650; text-align: center; }
+.agent-speed { display: flex; align-items: center; gap: 2px; }
+.agent-speed > span { margin-right: auto; color: #829087; font-size: 8px; letter-spacing: 0.9px; font-weight: 700; }
+.agent-speed button { padding: 3px 8px; border: 0; border-radius: 2px; background: transparent; color: #6c7d72; font-size: 10px; font-weight: 600; text-transform: capitalize; cursor: pointer; }
+.agent-speed button:hover { background: #f5f8f3; color: var(--forest); }
+.agent-speed button.is-active { background: var(--forest); color: var(--lime); }
 .chat-interface { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; border: 1px solid #e5ece3; background: #fff; }
 .chat-heading { min-height: 38px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 6px; border-bottom: 1px solid #edf1eb; color: #526b5a; }
 .chat-heading > span { display: flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.7px; font-weight: 750; }
@@ -351,7 +406,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--coral); outline
   .record-caption { font-size: 7px; }
   .reset-button { width: 32px; height: 32px; justify-content: center; padding: 0; }
   .reset-button span { display: none; }
-  .player-bar { min-height: 35px; }
+  .player-bar { min-height: 35px; flex-wrap: wrap; row-gap: 4px; }
   .avatar { width: 27px; height: 27px; flex-basis: 27px; }
   .player-name { font-size: 10px; }
   .player-piece-label { padding: 4px 6px; font-size: 7px; }

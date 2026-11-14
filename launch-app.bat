@@ -2,7 +2,7 @@
 REM Opens The Thinking Room in its own desktop window (development mode).
 REM Sets up everything it needs on first run: it offers to install Node.js,
 REM Python 3.11, the Visual C++ runtime and (optionally) Ollama with winget,
-REM then installs or updates the app's packages and the OpenSpiel engine.
+REM then installs or updates the app's packages, the OpenSpiel engine and Stockfish.
 setlocal EnableExtensions
 cd /d "%~dp0"
 title The Thinking Room
@@ -83,8 +83,14 @@ echo Install it from https://aka.ms/vs/17/release/vc_redist.x64.exe and run laun
 echo Until then, the built-in game AI plays instead of the OpenSpiel agent team.
 echo.
 
-REM ---- Optional: Ollama for chat and post-game coaching ----------------------
 :OLLAMA
+REM ---- Stockfish, for AI vs AI chess (the other agents play without it) -------
+if not exist "engine\bin\stockfish\stockfish.exe" (
+    call npm run --silent prepare:stockfish
+    if errorlevel 1 echo Stockfish could not be downloaded, so it won't appear in AI vs AI this time.
+)
+
+REM ---- Optional: Ollama for chat and post-game coaching ----------------------
 set "OLLAMA_MODEL=llama3.2:3b"
 if exist ".env.local" (
     for /f "tokens=1,* delims==" %%A in ('findstr /B /C:"OLLAMA_MODEL=" ".env.local" 2^>nul') do set "OLLAMA_MODEL=%%B"

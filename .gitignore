@@ -48,3 +48,6 @@ next-env.d.ts
 # OpenSpiel engine
 /engine/.venv/
 __pycache__/
+
+# Stockfish is downloaded by scripts/fetch-stockfish.ps1
+/engine/bin/

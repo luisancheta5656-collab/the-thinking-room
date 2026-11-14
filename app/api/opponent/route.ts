@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { adaptedLevel, cleanLevel } from "@/lib/agent-match";
 import { ollamaBaseUrl, ollamaModel } from "@/lib/ollama";
 import { askOpenSpiel, openspielStatus } from "@/lib/openspiel";
 
@@ -32,14 +33,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  let payload: { game?: unknown; board?: unknown; legalMoves?: unknown; sessionScore?: unknown };
+  let payload: { game?: unknown; board?: unknown; legalMoves?: unknown; sessionScore?: unknown; level?: unknown };
   try {
     payload = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid move request." }, { status: 400 });
   }
 
-  const { game, board, legalMoves, sessionScore } = payload;
+  const { game, board, legalMoves, sessionScore, level: chosenLevel } = payload;
   if (
     typeof game !== "string" || !supportedGames.has(game) ||
     !Array.isArray(legalMoves) || legalMoves.length === 0 || legalMoves.length > 300 ||
@@ -58,14 +59,11 @@ export async function POST(request: Request) {
     : {};
   const playerWins = Number.isInteger(score.player) && Number(score.player) >= 0 ? Number(score.player) : 0;
   const opponentWins = Number.isInteger(score.opponent) && Number(score.opponent) >= 0 ? Number(score.opponent) : 0;
-  // Steer the session toward 50/50: search harder when the player leads by two, softer when the agents do.
-  const winDifference = playerWins - opponentWins;
-  const challengeMode = winDifference >= 2 ? "increased"
-    : winDifference <= -2 ? "eased"
-      : "balanced";
+  // Steer the session toward 50/50 from the chosen difficulty.
+  const level = adaptedLevel(cleanLevel(chosenLevel), { player: playerWins, opponent: opponentWins });
 
   try {
-    const decision = await askOpenSpiel<EngineMove>("/move", { game, board, legalMoves: legal, challengeMode });
+    const decision = await askOpenSpiel<EngineMove>("/move", { game, board, legalMoves: legal, level });
     const move = legal.find((candidate) => candidate === decision.move);
     if (!move || typeof decision.explanation !== "string" || !decision.explanation.trim()) {
       return NextResponse.json({ error: "The OpenSpiel Referee did not return a valid legal move." }, { status: 502 });
@@ -76,7 +74,7 @@ export async function POST(request: Request) {
       winChance: decision.winChance,
       provider: "openspiel",
       agents: ["Strategist", "Challenger", "Referee"],
-      challengeMode,
+      level,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "OpenSpiel multi-agent turn failed.";

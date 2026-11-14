@@ -1,6 +1,6 @@
 # The Thinking Room
 
-A four-game board-game arcade for Windows: chess, tic-tac-toe, checkers, and Gomoku. Your opponent is a multi-agent team built on [OpenSpiel](https://github.com/google-deepmind/open_spiel), Google DeepMind's game-AI framework. A local Ollama model can optionally add chat and post-game coaching. Everything runs on your own computer.
+A four-game board-game arcade for Windows: chess, tic-tac-toe, checkers, and Gomoku. Your opponent is a multi-agent team built on [OpenSpiel](https://github.com/google-deepmind/open_spiel), Google DeepMind's game-AI framework. In chess and checkers, you can also pick two agents and watch them play each other. A local Ollama model can optionally add chat and post-game coaching. Everything runs on your own computer.
 
 ## Install and play (Windows)
 
@@ -9,7 +9,7 @@ A four-game board-game arcade for Windows: chess, tic-tac-toe, checkers, and Gom
 
 The installer includes everything the games need: Python and OpenSpiel are bundled inside the app.
 
-- **Requirements:** 64-bit Windows 10 or 11, about 640 MB of disk space, and a screen of at least 1024 × 700.
+- **Requirements:** 64-bit Windows 10 or 11, about 750 MB of disk space, and a screen of at least 1024 × 700.
 - **SmartScreen warning:** the installer isn't code-signed, so Windows may show "Windows protected your PC" on first run. Choose **More info**, then **Run anyway**.
 - **Chat and coaching** are optional and need Ollama; see [below](#optional-chat-and-coaching-with-ollama). The games work fully without it.
 
@@ -23,11 +23,45 @@ Each AI move is made by three OpenSpiel agents:
 
 Chess, tic-tac-toe, and Gomoku use OpenSpiel's built-in games. Checkers is registered as a Python OpenSpiel game, because the built-in version can't be loaded from a custom position and ends a turn on crowning, which this app's rules don't.
 
-The session win-rate display uses decisive games (wins and losses, excluding draws) and targets 50%. When either side leads by at least two wins, the search budget adapts. If the player is ahead, the agents search more (more MCTS simulations, deeper alpha-beta). If the agents are ahead, they search less and sample among their top moves. This tuning nudges the session toward 50/50 but doesn't guarantee it. The game rules engine still validates and applies every move. If the OpenSpiel engine is unavailable, the built-in local game AI plays instead.
+The session win-rate display uses decisive games (wins and losses, excluding draws) and targets 50%. When either side leads by at least two wins, OpenSpiel Team plays one difficulty level away from the one you chose: up if you're ahead, down if it is. This tuning nudges the session toward 50/50 but doesn't guarantee it. The game rules engine still validates and applies every move. If the OpenSpiel engine is unavailable, the built-in local game AI plays instead.
+
+## Choose your opponent
+
+In **You vs AI**, choose who you play from the dropdown above the board, and set the **Difficulty** slider beside it: Beginner, Easy, Medium, Hard, or Expert. The list shows the agents that play the current game, and your choices are remembered for each game. Both are fixed once you make your first move, until you start a new game. Once a game has started you can **Resign** from the bar under the board; it asks you to click again to confirm, and counts as a loss.
+
+| Agent | Plays | What it is | License |
+| --- | --- | --- | --- |
+| **OpenSpiel Team** | All four games | Strategist, Challenger, and Referee together | Apache-2.0 |
+| **Strategist** | All four games | OpenSpiel's Monte Carlo tree search alone | Apache-2.0 |
+| **Challenger** | All four games | Alpha-beta search over OpenSpiel states alone | Apache-2.0 |
+| [**Stockfish**](https://github.com/official-stockfish/Stockfish) | Chess | World-class chess engine | GPL-3.0 |
+| [**Sunfish**](https://github.com/thomasahle/sunfish) | Chess | Small chess engine written in Python | GPL-3.0 |
+| [**Raven**](https://github.com/bcorfman/raven-checkers) | Checkers | Raven Checkers' alpha-beta agent | MIT-0 |
+
+The slider changes each agent's strength in its own way:
+
+- **OpenSpiel Team, Strategist, Challenger:** more MCTS simulations and a deeper alpha-beta search at each level. Beginner and Easy also make deliberate mistakes by sometimes playing a weaker move.
+- **Stockfish:** its built-in Skill Level 0 at Beginner, then limits of about 1320, 1700, and 2300 Elo, then full strength at Expert.
+- **Sunfish:** search depth 1, 2, or 3, then one second or three seconds per move at Hard and Expert.
+- **Raven:** search depth 1, 2, 4, 6, and up to 10, with more thinking time at Hard and Expert.
+
+Tic-tac-toe is simple enough that strong levels play it perfectly, so the top levels feel alike there.
+
+Only OpenSpiel Team adapts to your session record, as described above. The other agents stay at the level you set, though your wins and losses against them still count in the same record. If a chosen agent can't move, the built-in AI plays that turn and the app says so in the chat.
+
+## AI vs AI
+
+In chess and checkers, switch the game header to **AI vs AI**, choose an agent and difficulty for each side, and press **Start match**. Only agents play in this mode: you watch, and the board ignores clicks. You can pause, step through one move at a time, and change the speed. Each agent explains its moves in the chat panel, and these matches don't count toward your record or the difficulty tuning. Any agent that plays the game can take either side, and an agent can play itself.
+
+Each agent's thinking time depends on its difficulty. A match is drawn if the same position comes up three times or after 200 moves. Chess also has its usual draws, and checkers is drawn after 40 moves without a capture.
+
+Stockfish and Sunfish run as separate programs that the app talks to over the UCI protocol. Raven follows English draughts rules, where crowning ends a turn, while this app lets a new king keep jumping. So Raven only ever chooses among the moves that are legal in this app.
 
 ## Boards and animation
 
 Chess can be played on a 3D board (Three.js) or the flat 2D board; use the **2D / 3D** switch in the game header, and the choice is remembered. The 3D camera is fixed at a tilted view from White's side. To play with the keyboard (Tab and Enter), use the 2D board. If the computer cannot run 3D graphics, the app switches to 2D automatically. On laptops with two graphics cards, the app asks Windows for the dedicated one.
+
+In chess, a king in check sits on a glowing red square and the turn label says **Check!** On checkmate, the king's square turns red and the king topples over, on both boards and in AI vs AI too.
 
 Pieces in chess and checkers slide to their new square, and captured pieces shrink away. In checkers, captures jump over the taken piece, each jump of a multi-jump plays in turn, and a newly crowned king glows. The opponent's reply waits until your move has finished animating. If Windows' **Animation effects** setting is off (Settings > Accessibility > Visual effects), pieces move without animation.
 
@@ -54,6 +88,7 @@ The launcher sets up everything the app needs. The first run downloads about 1 G
 - **Programs:** if Node.js 20.9+ or Python 3.11 is missing, it lists what's missing and asks before installing it with `winget` (Windows Package Manager, built into Windows 10 and 11). Windows may ask for permission. If `winget` isn't available, it shows the download links instead.
 - **Packages:** it installs the app's packages on first run, and again whenever `package-lock.json` changes, for example after you pull a change that adds a package.
 - **OpenSpiel engine:** it creates the engine's Python environment in `engine\.venv` on first run, and updates it whenever `engine\requirements.txt` changes. If OpenSpiel can't load because the Microsoft Visual C++ Redistributable is missing, it offers to install that too.
+- **Stockfish:** it downloads the official Stockfish release into `engine\bin\stockfish` (about 80 MB, not stored in Git). If the download fails, the other agents still play.
 - **Ollama (optional):** if Ollama isn't installed, it asks once whether to install it and the chat model (about 3 GB). If you say no, it doesn't ask again; delete `node_modules\.skip-ollama` to be asked again. If Ollama is installed, it starts it.
 - **Start:** it opens the app in its desktop window (`npm run desktop`).
 
@@ -75,13 +110,16 @@ Run `npm run desktop` from a normal terminal. VS Code's integrated terminal sets
 | Path | Contents |
 | --- | --- |
 | `app/page.tsx` | The game screen: boards, turns, score, chat, and the end-of-match card |
-| `app/api/opponent/` | API routes: agent moves (`route.ts`), chat, and coaching |
+| `app/api/opponent/` | API routes: agent moves (`route.ts`), moves by a chosen agent (`match/`), chat, and coaching |
 | `components/ChessBoard3D.tsx` | The 3D chess board |
+| `components/AgentMatchPanel.tsx`, `lib/agent-match.ts` | AI vs AI: choosing agents, match controls, and draw rules |
+| `components/DifficultySlider.tsx` | The five-stop difficulty slider |
 | `lib/games.ts` | Game rules and the built-in fallback AI |
 | `lib/animation.ts` | Move-animation timings (keep the matching CSS in `app/globals.css` in step) |
 | `lib/agent-configs.ts`, `lib/agent-factory.ts`, `lib/ollama.ts` | The Ollama chat and Coach agents |
 | `lib/openspiel.ts` | Client for the OpenSpiel engine |
-| `engine/` | The OpenSpiel engine: HTTP server, agent team, and game adapters (Python) |
+| `engine/` | The OpenSpiel engine: HTTP server, agent team, game adapters, and the agent roster (`roster.py`, `uci.py`, `raven_agent.py`) |
+| `engine/vendor/raven/` | The parts of Raven Checkers its agent needs |
 | `electron/main.js` | The desktop shell: starts the engine and the game server, opens the window |
 | `scripts/` | Installer build steps |
 | `public/models/chess/` | 3D chess piece models |
@@ -92,7 +130,7 @@ Run `npm run desktop` from a normal terminal. VS Code's integrated terminal sets
 npm run dist
 ```
 
-This needs an internet connection. It builds Next.js as a standalone server and downloads Python 3.11's embeddable build into `build\python` with OpenSpiel installed (`scripts\prepare-python.ps1`). It then packages everything with electron-builder into `dist\The Thinking Room Setup 0.1.0.exe` (about 190 MB). Inside the app, Electron starts the engine and the game server on private loopback ports and shows the game in its own window.
+This needs an internet connection. It builds Next.js as a standalone server, downloads Python 3.11's embeddable build into `build\python` with OpenSpiel and Sunfish installed (`scripts\prepare-python.ps1`), and downloads Stockfish (`scripts\fetch-stockfish.ps1`). It then packages everything with electron-builder into `dist\The Thinking Room Setup 0.1.0.exe` (about 270 MB). Inside the app, Electron starts the engine and the game server on private loopback ports and shows the game in its own window.
 
 To publish a version, upload the `.exe` to a GitHub release. It is too large to commit: GitHub rejects files over 100 MB, and `dist/` is ignored by Git.
 
@@ -109,6 +147,9 @@ npm run build
 ## Credits and licenses
 
 - [OpenSpiel](https://github.com/google-deepmind/open_spiel): Apache-2.0
+- [Stockfish](https://github.com/official-stockfish/Stockfish) (source code at that link; its license is kept in `engine\bin\stockfish\Copying.txt`): GPL-3.0
+- [Sunfish](https://github.com/thomasahle/sunfish) and its dependency [python-chess](https://github.com/niklasf/python-chess): GPL-3.0
+- [Raven Checkers](https://github.com/bcorfman/raven-checkers) by Brandon Corfman: MIT-0; see `engine/vendor/README.md`
 - [Electron](https://www.electronjs.org/), [Next.js](https://nextjs.org/), [React](https://react.dev/), [Three.js](https://threejs.org/): MIT
 - [chess.js](https://github.com/jhlywa/chess.js): BSD-2-Clause
 - [Lucide](https://lucide.dev/) icons: ISC
@@ -120,7 +161,7 @@ npm run build
 
 | Member | Role |
 | --- | --- |
-| Hakuryu Acosta Kato | Full Stack Developer / AI Engineer / Project Lead |
-| Luis Fernando A. Nival | Backend Developer / Debugging Engineer |
-| Zerwin Kurt D. Ventura | Quality Assurance Tester / Documentation / Researcher |
-| Mickaela Paula R. Orillosa | Quality Assurance Tester / Documentation / Researcher |
+| Hakuryu Acosta Kato | Full Stack Developer / Game Designer / Project Lead |
+| Luis Fernando A. Nival | Backend Developer / AI Engineer |
+| Zerwin Kurt D. Ventura | Quality Assurance Tester / Gane Designer / Researcher |
+| Mickaela Paula R. Orillosa | Quality Assurance Tester / Game Designer / Researcher |
